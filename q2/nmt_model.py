@@ -302,11 +302,6 @@ class NMT(nn.Module):
         if enc_masks is not None:
             e_t.data.masked_fill_(enc_masks.bool(), -float('inf'))
 
-        ### YOUR CODE HERE (~6 Lines)
-        ### TODO:
-        ###     1. Apply softmax to e_t to yield alpha_t
-        ###     2. Use batched matrix multiplication between alpha_t and enc_hiddens to obtain the
-        ###         attention output vector, a_t.
         softmax=nn.Softmax(dim=-1)
         tanh=nn.Tanh()
         alpha_t=softmax(e_t)
@@ -316,31 +311,6 @@ class NMT(nn.Module):
         U_t=torch.cat((dec_hidden, a_t), dim=1)
         V_t=self.combined_output_projection(U_t)
         O_t=self.dropout(tanh(V_t))
-        #$$     Hints:
-        ###           - alpha_t is shape (b, src_len) -> (b, 1, src_len)으로
-        ###           - enc_hiddens is shape (b, src_len, 2h)
-        ###           - a_t should be shape (b, 2h)
-        ###           - You will need to do some squeezing and unsqueezing.
-        ###     Note: b = batch size, src_len = maximum source length, h = hidden size.
-        ###
-        ###     3. Concatenate dec_hidden with a_t to compute tensor U_t
-        ###     4. Apply the combined output projection layer to U_t to compute tensor V_t
-        ###     5. Compute tensor O_t by first applying the Tanh function and then the dropout layer.
-        ###
-        ### Use the following docs to implement this functionality:
-        ###     Softmax:
-        ###         https://pytorch.org/docs/stable/nn.functional.html#torch.nn.functional.softmax
-        ###     Batch Multiplication:
-        ###        https://pytorch.org/docs/stable/torch.html#torch.bmm
-        ###     Tensor View:
-        ###         https://pytorch.org/docs/stable/tensors.html#torch.Tensor.view
-        ###     Tensor Concatenation:
-        ###         https://pytorch.org/docs/stable/torch.html#torch.cat
-        ###     Tanh:
-        ###         https://pytorch.org/docs/stable/torch.html#torch.tanh
-
-
-
 
 
         ### END YOUR CODE
