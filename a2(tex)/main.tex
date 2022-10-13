@@ -481,11 +481,7 @@ Run \texttt{setup.sh} to properly set up the environment. You are NOT allowed to
     \item Implement \texttt{add\_norm} function in \texttt{BertLayer} class of \texttt{bert.py}. It corresponds to Add \& Norm Layer in the figure \ref{transformer}, which is defined as $\text{LayerNorm}(x+\text{Sublayer}(x))$ \textbf{(3 pts)}
     \item  Implement \texttt{forward} function in \texttt{BertLayer} class of \texttt{bert.py}. It corresponds to encoder stacks which are described on the left of the figure \ref{transformer}. After completing the codes, run \texttt{python sanity\_check.py} to check your implementation. \textbf{(3 pts)}
    \item  Implement \texttt{step} function in \texttt{AdamW} class of \texttt{optimizer.py}. Implement parameter update of Adam optimizer. For sanity check, run \texttt{python optimizer\_test.py} \textbf{(3 pts)}
-           \begin{align}
-m_t=\beta_1 m_{t-1}+(1-\beta_1)g_t \\
-v_t=\beta_2 v_{t-1}+(1-\beta_2)g_t\odot g_t  \\
-\theta_t-=\frac{\eta}{\sqrt{\hat{v_t}+\epsilon}\hat{m_t}} \text{ where } \hat{m_t}=\frac{m_t}{1-(\beta_1)^t} \text{ and } \hat{v_t}=\frac{v_t}{1-(\beta_2)^t} 
-\end{align} 
+       \newline (as noted at skeleton codes, we are using the optimizer presented at \href{https://arxiv.org/abs/1412.6980}{THIS PAPER}) 
   \item  Implement \texttt{train} function in \texttt{classifier.py}. This function carries out backpropagation through the model parameters. \textbf{(3 pts)}
   
    \item Show time! Run \texttt{python3 classifier.py --option finetune --epochs NUM\_EPOCHS --lr LR --train data/sst-train.txt --dev data/sst-dev.txt --test data/sst-test.txt --use\_gpu} . Report hyperparameters NUM\_EPOCHS and LR which shows test accuracy higher than 0.5 and submit \textbf{ONE} \texttt{.pt} file accordingly. \newline \textbf{(HINT: }Think about how learning rate is likely to be when fine-tune the transformer model) \textbf{(3 pts)} \begin{answer}
