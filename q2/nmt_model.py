@@ -68,7 +68,14 @@ class NMT(nn.Module):
         ###     Dropout Layer:
         ###         https://pytorch.org/docs/stable/nn.html#torch.nn.Dropout
 
-
+        self.encoder = nn.LSTM(self.embed_size, self.hidden_size, bidirectional=True) 
+        self.decoder = LSTMCell_assignment(self.embed_size+self.hidden_size, self.hidden_size)
+        self.h_projection = nn.Linear(2*self.hidden_size, self.hidden_size, False)
+        self.c_projection = nn.Linear(2*self.hidden_size, self.hidden_size, False)
+        self.att_projection = nn.Linear(2*self.hidden_size, self.hidden_size, False)
+        self.combined_output_projection = nn.Linear(3*self.hidden_size, self.hidden_size, False)
+        self.target_vocab_projection = nn.Linear(self.hidden_size, len(self.vocab.tgt), False)
+        self.dropout = nn.Dropout(self.dropout_rate)
 
         ### END YOUR CODE
 
@@ -138,7 +145,7 @@ class NMT(nn.Module):
         ###           return a tensor of shape (b, src_len, h*2) as `enc_hiddens`.
         ###     3. Compute `dec_init_state` = (init_decoder_hidden, init_decoder_cell):
         ###         - `init_decoder_hidden`:
-        ###             `last_hidden` is a tensor shape (2, b, h). The first dimension corre onds to forwards and backwards.
+        ###             `last_hidden` is a tensor shape (2, b, h). The first dimension corresponds to forwards and backwards.
         ###             Concatenate the forwards and backwards tensors to obtain a tensor shape (b, 2*h).
         ###             Apply the h_projection layer to this in order to compute init_decoder_hidden.
         ###             This is h_0^{dec} in the PDF. Here b = batch size, h = hidden size
@@ -158,9 +165,15 @@ class NMT(nn.Module):
         ###     Tensor Permute:
         ###         https://pytorch.org/docs/stable/tensors.html#torch.Tensor.permute
 
+        X = self.model_embeddings.source(source_padded) # X shape: (src_len, b, e)
+        packed = pack_padded_sequence(X, source_lengths)
 
-
-
+        enc_hiddens, (last_hidden, last_cell)  = self.encoder(packed) # inputs: (src_len, b, input_size)
+        enc_hiddens, _ = pad_packed_sequence(enc_hiddens, batch_first = True)
+        
+        init_decoder_hidden = self.h_projection(torch.cat((last_hidden[0], last_hidden[1]), 1))
+        init_decoder_cell = self.c_projection(torch.cat((last_cell[0], last_cell[1]), 1))
+        dec_init_state = (init_decoder_hidden, init_decoder_cell)
 
         ### END YOUR CODE
 
@@ -206,7 +219,7 @@ class NMT(nn.Module):
         ###     3. Use the torch.split function to iterate over the time dimension of Y.
         ###         Within the loop, this will give you Y_t of shape (1, b, e) where b = batch size, e = embedding size.
         ###             - Squeeze Y_t into a tensor of dimension (b, e). 
-        ###             - Construct Ybar_t by concatenating Y_t with o_prev on their last dimension //여기까지 했다
+        ###             - Construct Ybar_t by concatenating Y_t with o_prev on their last dimension
         ###             - Use the step function to compute the the Decoder's next (cell, state) values
         ###               as well as the new combined output o_t.
         ###             - Append o_t to combined_outputs
@@ -231,10 +244,16 @@ class NMT(nn.Module):
         ###     Tensor Stacking:
         ###         https://pytorch.org/docs/stable/torch.html#torch.stack
 
-
-
-
-
+        enc_hiddens_proj = self.att_projection(enc_hiddens)
+        Y = self.model_embeddings.target(target_padded)
+        for Y_t in torch.split(Y, 1):
+            Y_t = torch.squeeze(Y_t, 0)
+            Ybar_t = torch.cat((Y_t, o_prev), -1)
+            dec_state, o_t, _ = self.step(Ybar_t, dec_state, enc_hiddens, enc_hiddens_proj, enc_masks)
+            combined_outputs.append(o_t)
+            o_t = o_prev
+        
+        combined_outputs = torch.stack(combined_outputs, 0)
 
         ### END YOUR CODE
 
@@ -293,9 +312,16 @@ class NMT(nn.Module):
         ###     Tensor Squeeze:
         ###         https://pytorch.org/docs/stable/torch.html#torch.squeeze
 
+        batch_size = enc_hiddens.size()[0]
 
+        dec_state = self.decoder(Ybar_t, dec_state)
+        dec_hidden, dec_cell = dec_state
 
-
+        # attention scores
+        # dec_hidden: (b, h) -> (b, 1, h)
+        # enc_hiddens_proj: (b, L, h) -> (b, h, L)
+        e_t = torch.bmm(torch.unsqueeze(dec_hidden, 1), torch.transpose(enc_hiddens_proj, 1, 2))
+        e_t = torch.squeeze(e_t, 1) # (b, 1, L) -> (b, L)
         ### END YOUR CODE
 
         # Set e_t to -inf where enc_masks has 1
@@ -444,7 +470,7 @@ class NMT(nn.Module):
         return model
 
     def save(self, path: str):
-        """ Save the odel to a file.
+        """ Save the model to a file.
         @param path (str): path to the model
         """
         print('save model parameters to [%s]' % path, file=sys.stderr)

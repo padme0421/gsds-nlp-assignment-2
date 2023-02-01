@@ -40,6 +40,7 @@ class GRUCell_assignment(nn.Module):
         nn.init.uniform_(self.Wir.weight.data, -1/sqrt(hidden_size), 1/sqrt(hidden_size))
         nn.init.uniform_(self.Wiz.weight.data, -1/sqrt(hidden_size), 1/sqrt(hidden_size))
         nn.init.uniform_(self.Win.weight.data, -1/sqrt(hidden_size), 1/sqrt(hidden_size))
+    
     def forward(self, inputs, hidden=False):
         if hidden is False: hidden = inputs.new_zeros(inputs.shape[0], self.hidden_size)
         x, h = inputs, hidden
@@ -68,10 +69,23 @@ class LSTMCell_assignment(nn.Module):
         ### input_size – The number of expected features in the input x
         ### hidden_size – The number of features in the hidden state h
         ### bias – If False, then the layer does not use bias weights b_ih and b_hh. Default: True
-
-
+        self.Wii = nn.Linear(input_size, hidden_size, bias)
+        self.Whi = nn.Linear(hidden_size, hidden_size, bias)
+        self.Wif = nn.Linear(input_size, hidden_size, bias)
+        self.Whf = nn.Linear(hidden_size, hidden_size, bias)
+        self.Wig = nn.Linear(input_size, hidden_size, bias)
+        self.Whg = nn.Linear(hidden_size, hidden_size, bias)
+        self.Wio = nn.Linear(input_size, hidden_size, bias)
+        self.Who = nn.Linear(hidden_size, hidden_size, bias)
+        nn.init.uniform_(self.Wii.weight.data, -1/sqrt(hidden_size), 1/sqrt(hidden_size))
+        nn.init.uniform_(self.Wif.weight.data, -1/sqrt(hidden_size), 1/sqrt(hidden_size))
+        nn.init.uniform_(self.Wig.weight.data, -1/sqrt(hidden_size), 1/sqrt(hidden_size))
+        nn.init.uniform_(self.Wio.weight.data, -1/sqrt(hidden_size), 1/sqrt(hidden_size))
 
     def forward(self, inputs, dec_state):
+        if dec_state is False: 
+            h = inputs.new_zeros(inputs.shape[0], self.hidden_size)
+            c = inputs.new_zeros(inputs.shape[0], self.hidden_size)
         x, h, c = inputs, dec_state[0], dec_state[1]
         ### Inputs: input, (h_0, c_0)
         ### input of shape (batch, input_size): tensor containing input features
@@ -84,6 +98,11 @@ class LSTMCell_assignment(nn.Module):
         ### c_1 of shape (batch, hidden_size): tensor containing the next cell state for each element in the batch
         ### YOUR CODE HERE (~6 Lines)
         ### TODO - Implement forward prop in LSTM cell. 
- 
-
+        i = torch.sigmoid(self.Wii(x) + self.Whi(h))
+        f = torch.sigmoid(self.Wif(x) + self.Whf(h))
+        g = torch.tanh(self.Wig(x) + self.Whg(h))
+        o = torch.sigmoid(self.Wio(x) + self.Who(h))
+        c = f * c + i * g
+        h = o * torch.tanh(c)
+        
         return (h, c)
