@@ -173,7 +173,7 @@ class NMT(nn.Module):
         
         init_decoder_hidden = self.h_projection(torch.cat((last_hidden[0], last_hidden[1]), 1))
         init_decoder_cell = self.c_projection(torch.cat((last_cell[0], last_cell[1]), 1))
-        dec_init_state = (init_decoder_hidden, init_decoder_cell)
+        dec_init_state = (init_decoder_hidden, init_decoder_cell) ## seems ok.
 
         ### END YOUR CODE
 
@@ -251,7 +251,9 @@ class NMT(nn.Module):
             Ybar_t = torch.cat((Y_t, o_prev), -1)
             dec_state, o_t, _ = self.step(Ybar_t, dec_state, enc_hiddens, enc_hiddens_proj, enc_masks)
             combined_outputs.append(o_t)
-            o_t = o_prev
+            o_t = o_prev 
+            # "update o_prev to the new o_t이기 때문에, o_prev = o_t가 적절해 보입니다.
+            # 위아래로 흐름을 한번 보시면, "o_t=o_prev"에서 o_t에 write되고, 이것이 함수의 argument로 쓰이지 않은 채 다시 wirte되고 있음을 알 수 있습니다.
         
         combined_outputs = torch.stack(combined_outputs, 0)
 
